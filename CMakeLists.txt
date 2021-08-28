@@ -1,22 +1,53 @@
 cmake_minimum_required(VERSION 3.12..3.20)
 
-include(cmake/CPM.cmake)
-
-add_subdirectory(source_files/lua_src)
-add_subdirectory(source_files/acc_src)
-add_subdirectory(source_files/ff_src)
-add_subdirectory(source_files/physfs_src)
-add_subdirectory(source_files/zdbsp_src)
-add_subdirectory(source_files/slump_src)
-add_subdirectory(source_files/zlib_src)
-add_subdirectory(source_files/fmt_src)
-add_subdirectory(source_files/whereami_src)
-
 project(
   obsidian
   LANGUAGES CXX
   VERSION 0.1.0
 )
+
+if(MSVC)
+option(FORCE_STATIC_MSVC_LIBS "MSVC: Use pre-built libs" OFF)
+option(FORCE_INTERNAL_ZLIB "Use internal zlib" OFF)
+option(FORCE_INTERNAL_FLTK "Use internal fltk" OFF)
+endif()
+
+if(MSVC)
+find_package( ZLIB )
+endif()
+
+
+if(APPLE)
+find_library(COCOA_LIBRARY Cocoa)
+FIND_PATH(COCOA_INCLUDE_DIR Cocoa/Cocoa.h)
+endif()
+
+
+if(NOT ZLIB_FOUND OR INTERNAL_ZLIB)
+	message(STATUS "Using internal zlib")
+	set(ZLIB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source_files/zlib_src)
+	add_subdirectory(source_files/zlib_src)
+	set(ZLIB_LIBRARIES ZLIB::ZLIB)
+	set(ZLIB_LIBRARY ZLIB::ZLIB)
+else()
+	message(STATUS "Using system zlib, includes found at ${ZLIB_INCLUDE_DIR}")
+endif()
+
+if(NOT FLTK_FOUND OR INTERNAL_FLTK)
+	message(STATUS "Using internal fltk")
+	set(FLTK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source_files/fltk_src)
+	add_subdirectory(source_files/fltk_src)
+	set(FLTK_LIBRARIES FLTK)
+	#set(ZLIB_LIBRARY ZLIB::ZLIB)
+ # target_link_libraries(obsidian PRIVATE ${FLTK_LIBRARIES})
+else()
+	message(STATUS "Using system fltk, includes found at ${FLTK_INCLUDE_DIR}")
+  # use vendored version
+  #add_subdirectory(source_files/fltk_src)
+  #target_link_libraries(obsidian PRIVATE fltk fltk_images)
+  #target_include_directories(obsidian PRIVATE source_files/fltk_src)
+endif()
+
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -30,6 +61,14 @@ if(MSYS)
   set(CMAKE_EXE_LINKER_FLAGS "-static -mwindows -Isource_files/zlib_src/libzlibstatic.a")
 endif()
 
+if(MSVC)
+	add_definitions(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE)
+endif()
+
+if(CMAKE_BUILD_TOOL MATCHES "(msdev|devenv|nmake)")
+    add_definitions(/W1)
+endif()
+
 if(false)
   set(CMAKE_CXX_CLANG_TIDY clang-tidy)
   file(GLOB ALL_SOURCES "source_files/obsidian_src/*.cc" "source_files/obsidian_src/*.hh")
@@ -39,19 +78,6 @@ if(false)
   )
 endif()
 
-cpmaddpackage(
-  NAME
-  Format.cmake
-  VERSION
-  1.7.0
-  GITHUB_REPOSITORY
-  TheLartians/Format.cmake
-  OPTIONS
-  # set to "yes" to skip CMake formatting
-  "FORMAT_SKIP_CMAKE NO"
-  # path to exclude from formatting (optional + regex)
-  "CMAKE_FORMAT_EXCLUDE cmake/CPM.cmake"
-)
 
 add_executable(
   obsidian
@@ -177,6 +203,17 @@ add_executable(
   "source_files/obsidian_src/defines.h"
 )
 
+
+add_subdirectory(source_files/lua_src)
+add_subdirectory(source_files/acc_src)
+add_subdirectory(source_files/ff_src)
+add_subdirectory(source_files/physfs_src)
+add_subdirectory(source_files/zdbsp_src)
+add_subdirectory(source_files/slump_src)
+add_subdirectory(source_files/fmt_src)
+add_subdirectory(source_files/whereami_src)
+
+
 target_include_directories(obsidian PRIVATE source_files/physfs_src)
 target_include_directories(obsidian PRIVATE source_files/zdbsp_src)
 target_include_directories(obsidian PRIVATE source_files/lua_src)
@@ -195,14 +232,6 @@ if(UNIX)
   find_package(FLTK 1.3)
 endif()
 
-if(FLTK_FOUND AND NOT MSYS)
-  target_link_libraries(obsidian PRIVATE ${FLTK_LIBRARIES})
-else()
-  # use vendored version
-  add_subdirectory(source_files/fltk_src)
-  target_link_libraries(obsidian PRIVATE fltk fltk_images)
-  target_include_directories(obsidian PRIVATE source_files/fltk_src)
-endif()
 
 if(WIN32 OR MSYS)
   add_subdirectory(source_files/wingetopt_src)
@@ -242,12 +271,13 @@ if(UNIX)
 else()
   target_link_libraries(
     obsidian
-    PRIVATE zlibstatic
+    PRIVATE ZLIB::ZLIB
             obsidian_lua
             obsidian_physfs
             obsidian_acc
             obsidian_zdbsp
             obsidian_slump
             obsidian_whereami
+			${FLTK_LIBRARIES}
   )
 endif()

@@ -2,6 +2,8 @@
 #define __WAD_H__
 
 #ifdef _MSC_VER
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
 #pragma once
 #endif
 
