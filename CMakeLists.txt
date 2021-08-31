@@ -14,6 +14,8 @@ endif()
 
 if(MSVC)
 find_package( ZLIB )
+find_package( FLTk )
+find_package(libpng CONFIG REQUIRED)
 endif()
 
 
@@ -35,7 +37,7 @@ endif()
 
 if(NOT FLTK_FOUND OR INTERNAL_FLTK)
 	message(STATUS "Using internal fltk")
-	set(FLTK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source_files/fltk_src)
+	set(FLTK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source_files/fltk_src)
 	add_subdirectory(source_files/fltk_src)
 	set(FLTK_LIBRARIES FLTK)
 	#set(ZLIB_LIBRARY ZLIB::ZLIB)
@@ -47,7 +49,6 @@ else()
   #target_link_libraries(obsidian PRIVATE fltk fltk_images)
   #target_include_directories(obsidian PRIVATE source_files/fltk_src)
 endif()
-
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -279,5 +280,6 @@ else()
             obsidian_slump
             obsidian_whereami
 			${FLTK_LIBRARIES}
+			png_static
   )
 endif()
